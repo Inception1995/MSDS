@@ -1,0 +1,177 @@
+---
+title: 'Examining NYPD Shooting Incidents: Past Patterns and Future Trends'
+author: "S. Walker"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+<br>  <!-- This adds a line break -->
+The data set in review is of all shooting incidents recorded by the NYPD between 2006 and 2023 occurring in New York City.
+
+My analysis found Brooklyn had the most amount of incidents and Staten Island had the least amount of incidents by a large margin.
+
+```{r library, include=FALSE}
+library(tidyverse)  # Load tidyverse, which includes readr
+```
+
+```{r directory, include=FALSE}
+getwd()
+```
+
+```{r import, include=FALSE}
+url_in <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+data <- read_csv(url_in)
+```
+
+```{r overview and summary, include=FALSE}
+glimpse(data)  # Overview of the dataset
+summary(data)  # Summary statistics
+```
+
+```{r missing values, include=FALSE}
+missing_values <- colSums(is.na(data))
+missing_values
+```
+
+```{r drop missing values, include=FALSE}
+cleaned_data <- data %>%
+  filter(!is.na(OCCUR_DATE)) %>%
+  mutate(OCCUR_DATE = as.Date(OCCUR_DATE, format = "%m/%d/%Y"))
+```
+
+```{r count of incidents by borough, include=FALSE}
+borough_counts <- cleaned_data %>%
+  group_by(BORO) %>%
+  summarise(count = n())
+```
+
+```{r borough-visualization, echo=FALSE}
+ggplot(borough_counts, aes(x = BORO, y = count, fill = BORO)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of NYPD Shooting Incidents by Borough",
+       x = "Borough",
+       y = "Number of Incidents") +
+  theme_minimal()
+```
+
+The number of incidents has remained relatively stable over time with the exception of the spring of 2020. The spike in incidents occurred around the time of the George Floyd protests and early COVID lockdowns.
+
+Although many in the media and politics have associated these events with the rise in violent crime, I cannot ascertain the veracity of these claims due to the limited data set I analyzed.
+
+```{r incidents by date, echo=FALSE}
+# Count of incidents by date
+incidents_over_time <- cleaned_data %>%
+  group_by(OCCUR_DATE) %>%
+  summarise(count = n())
+
+# Create a line plot
+ggplot(incidents_over_time, aes(x = OCCUR_DATE, y = count)) +
+  geom_line(color = "blue") +
+  labs(title = "NYPD Shooting Incidents Over Time",
+       x = "Date",
+       y = "Number of Incidents") +
+  theme_minimal()
+```
+
+```{r model-prep, echo=FALSE, include=FALSE}
+# Convert date to numeric for modeling
+incidents_over_time <- incidents_over_time %>%
+  mutate(date_numeric = as.numeric(OCCUR_DATE))
+
+# Fit a linear model
+model <- lm(count ~ date_numeric, data = incidents_over_time)
+
+# Add predictions to the dataset
+incidents_over_time <- incidents_over_time %>%
+  mutate(predicted = predict(model))
+```
+
+\newpage
+Using historical patterns to predict the future number of incidents we find there is a slight decrease in incidents expected over time.
+
+```{r plotted, echo=FALSE}
+# Plot actual vs predicted
+ggplot(incidents_over_time, aes(x = OCCUR_DATE)) +
+  geom_line(aes(y = count), color = "blue") +
+  geom_line(aes(y = predicted), color = "red", linetype = "dashed") +
+  labs(title = "Average number of incidents trend",
+       x = "Date",
+       y = "Number of Incidents") +
+  theme_minimal()
+```
+
+\newpage
+# <center>**Bias**</center>
+
+This section discusses potential biases in the data and analysis. It's important to consider how various factors may influence the results and interpretations of the NYPD shooting incident data set.
+
+One factor to consider includes data being under reported. Many studies show due to the mistrust between minority communities and the police, they report crime at a lower rate than white communities.
+
+Many studies also show that during economic downturns, violent crime spikes. This could be partially responsible for the spring 2020 spike but again would require further study of separate data sets.
+
+Lastly, we have to consider that reports of domestic violence often increase as partners are forced to be around each other more often. When analyzing the human cost of lockdowns, this should be considered by the government.
+
+Bias can be factored into analysis by weighting incidents or tracking averages to show what the average experience is without outlying events.
+
+I have attempted to reduce bias in my analysis by showing rolling averages juxtaposed against raw numbers. Addressing systematic issues in my summaries also helps the audience "weight" the results in their own minds. Additional reduction in bias could be added by showing the incident rate per capita as opposed to the raw number of incidents.
+
+\newpage
+<center>**Work Shown Here**</center>
+
+
+library(tidyverse)  # Load tidyverse, which includes readr
+
+getwd()
+
+url_in <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+data <- read_csv(url_in)
+
+glimpse(data)  # Overview of the dataset
+summary(data)  # Summary statistics
+
+missing_values <- colSums(is.na(data))
+missing_values
+
+cleaned_data <- data %>%
+  filter(!is.na(OCCUR_DATE)) %>%
+  mutate(OCCUR_DATE = as.Date(OCCUR_DATE, format = "%m/%d/%Y"))
+
+borough_counts <- cleaned_data %>%
+  group_by(BORO) %>%
+  summarise(count = n())
+
+ggplot(borough_counts, aes(x = BORO, y = count, fill = BORO)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of NYPD Shooting Incidents by Borough",
+       x = "Borough",
+       y = "Number of Incidents") +
+  theme_minimal()
+
+incidents_over_time <- cleaned_data %>%
+  group_by(OCCUR_DATE) %>%
+  summarise(count = n())
+
+ggplot(incidents_over_time, aes(x = OCCUR_DATE, y = count)) +
+  geom_line(color = "blue") +
+  labs(title = "NYPD Shooting Incidents Over Time",
+       x = "Date",
+       y = "Number of Incidents") +
+  theme_minimal()
+
+incidents_over_time <- incidents_over_time %>%
+  mutate(date_numeric = as.numeric(OCCUR_DATE))
+
+model <- lm(count ~ date_numeric, data = incidents_over_time)
+
+incidents_over_time <- incidents_over_time %>%
+  mutate(predicted = predict(model))
+
+ggplot(incidents_over_time, aes(x = OCCUR_DATE)) +
+  geom_line(aes(y = count), color = "blue") +
+  geom_line(aes(y = predicted), color = "red", linetype = "dashed") +
+  labs(title = "Actual vs Predicted Shooting Incidents",
+       x = "Date",
+       y = "Number of Incidents") +
+  theme_minimal()
